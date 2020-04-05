@@ -1,0 +1,10 @@
+filename,id,prefix,timepoint
+10X_19_001.filtered_feature_bc_matrix.h5,R30_w85,R30_w8.5,8
+10X_19_063.filtered_feature_bc_matrix.h5,R39_w95,R39_w9.5,9
+10X_19_088.filtered_feature_bc_matrix.h5,R43_w60,R43_w6,6
+10X_19_123.filtered_feature_bc_matrix.h5,R48a_w145,R48a_w14.5,14
+10X_19_124.filtered_feature_bc_matrix.h5,R48b_w120,R48b_w12,12
+10X_19_125.filtered_feature_bc_matrix.h5,R48c_w85,R48c_w8.5,8
+10X_20_005.filtered_feature_bc_matrix.h5,R53a_w95,R53a_w9.5,9
+10X_20_006.filtered_feature_bc_matrix.h5,R53b_w115,R53b_w11.5,11
+10X_20_007.filtered_feature_bc_matrix.h5,R53c_w95,R53c_w9.5,9
