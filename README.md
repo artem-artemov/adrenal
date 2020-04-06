@@ -14,3 +14,6 @@
 - Other fates
   * [Adrenal cortex, endothelium, blood](notebooks/human_cortex_endothelium_blood.ipynb)
 
+- Mouse trunk dataset
+  * [Mouse: whole dataset, medulla, trajectories](notebooks/adrenal_mouse.ipynb)
+  * [RNA velocity](notebooks/mouse_adrenal_medulla_velocity.ipynb)
