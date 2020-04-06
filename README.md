@@ -17,3 +17,16 @@
 - Mouse trunk dataset
   * [Mouse: whole dataset, medulla, trajectories](notebooks/adrenal_mouse.ipynb)
   * [RNA velocity](notebooks/mouse_adrenal_medulla_velocity.ipynb)
+
+## Download data
+
+```sh
+mkdir data/Seurat
+wget -P data/Seurat/ http://pklab.med.harvard.edu/artem/adrenal/data/Seurat/adrenal.human.seurat.rds
+wget -P data/Seurat/ http://pklab.med.harvard.edu/artem/adrenal/data/Seurat/adrenal.mouse.seurat.rds
+wget -P data/Seurat/ http://pklab.med.harvard.edu/artem/adrenal/data/Seurat/adrenal_medulla.rds
+wget -P data/Seurat/ http://pklab.med.harvard.edu/artem/adrenal/data/Seurat/sympathoblasts_chromaffin.rmd
+```
+
+Alternatively, all preprocessed data including h5 files (read counts from cellranger) and loom files (counts for exonic and intronic reads from velocyto) can be downloaded from (http://pklab.med.harvard.edu/artem/adrenal/adrenal_data.tar)
+
