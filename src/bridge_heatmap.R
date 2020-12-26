@@ -19,14 +19,17 @@ seurat2monocle = function(SR, fix_partitions=F){
     cds <- preprocess_cds(cds, num_dim = 100)
     
     UMAP = SR@reductions$umap@cell.embeddings
-    cds@reducedDims$UMAP = UMAP
+    #cds@reducedDims$UMAP = UMAP
+    reducedDims(cds)$UMAP = UMAP
 
     cds <- cluster_cells(cds)
     
     colData(cds)$seurat_cluster = factor(SR@meta.data$seurat_cluster)
     
     if(fix_partitions){
-        cds@clusters$UMAP$partitions = factor(rep(1, length(cds@clusters$UMAP$partitions)))
+        partitions = factor(rep(1, length(cds@clusters$UMAP$partitions)))
+        names(partitions) = names(cds@clusters$UMAP$partitions)
+        #cds@clusters$UMAP$partitions = factor(rep(1, length(cds@clusters$UMAP$partitions)))
     }
     
     cds <- learn_graph(cds, use_partition = T)
@@ -74,8 +77,10 @@ save_pheatmap_pdf <- function(x, filename, width=7, height=7) {
 # @param qv_cutoff q_value cutoff for monocle3 graph_test
 # @param min_var minimal variance for monocle3 graph_test
 #
-analyze_bridge=function(cds, from, to, pr_deg_ids=NULL, f_heatmap = 'figures/tmp.heatmap.pdf', lmar=1, return_matrix=F,
-                       qv_cutoff=10^-50, min_var=10){
+analyze_bridge=function(cds, from, to, pr_deg_ids=NULL, f_heatmap = 'figures/tmp.heatmap.pdf', lmar=1, 
+                        return_matrix=F, return_cds = F,
+                        qv_cutoff=10^-50, min_var=10, pst_breaks=NULL,
+                        pt.size=1){
     # locate 'from' and 'to' nodes in the principal tree
     branchnodes = monocle3:::branch_nodes(cds)
     y0 = names(branchnodes)[from]
@@ -94,6 +99,13 @@ analyze_bridge=function(cds, from, to, pr_deg_ids=NULL, f_heatmap = 'figures/tmp
     # order cells according to pseudotime
     cds_sel_pt = order_cells(cds_sel, reduction_method = 'UMAP', root_pr_nodes = y0)
     
+    if(!is.null(pst_breaks)){
+        colData(cds_sel_pt)$pseudotime = pseudotime(cds_sel_pt)
+        #colData(cds_sel_pt)$group = ifelse(colData(cds_sel_pt)$pseudotime<pst_breaks[1], 1,
+        #                                  ifelse(colData(cds_sel_pt)$pseudotime>pst_breaks[2], 3, 2))
+        cds_sel_pt = cds_sel_pt[, colData(cds_sel_pt)$pseudotime>pst_breaks[1] & colData(cds_sel_pt)$pseudotime<pst_breaks[2]]
+    }
+    
     # plot trajectory, color cells by pseudotime
     print(gsub('heatmap.pdf', 'trajectory.pdf', f_heatmap))
     p_traject = plot_cells(cds_sel_pt,
@@ -104,7 +116,7 @@ analyze_bridge=function(cds, from, to, pr_deg_ids=NULL, f_heatmap = 'figures/tmp
                graph_label_size=1.5,
                label_roots = F,
                trajectory_graph_segment_size = 0.2,
-               cell_size = 1)+ theme(legend.position = "none")
+               cell_size = pt.size)+ theme(legend.position = "none")
     print(p_traject)
     ggsave(gsub('heatmap.pdf', 'trajectory.pdf', f_heatmap), width=5, height=5)
 
@@ -120,6 +132,8 @@ analyze_bridge=function(cds, from, to, pr_deg_ids=NULL, f_heatmap = 'figures/tmp
     
     cds_subset = cds_sel_pt[pr_deg_ids,]
     colData(cds_subset)$pseudotime = pseudotime(cds_subset)
+    if(return_cds)
+        return(cds_subset)
 
     # smooth gene expression along pseudotime
     trend_formula='~ splines::ns(pseudotime, df=3)'
@@ -160,6 +174,40 @@ analyze_bridge=function(cds, from, to, pr_deg_ids=NULL, f_heatmap = 'figures/tmp
 
     save_pheatmap_pdf(ph, f_heatmap, 5, 5)
     
+    ####
+    df_col_annot = data.frame(
+        pseudotime = as.numeric(colData(cds_subset)$pseudotime)
+        #group = factor(colData(cds_subset)$group)
+    )
+    df_col_annot = df_col_annot[order(colData(cds_subset)$pseudotime),,drop=F]
+    df_col_annot = df_col_annot[lmar:nrow(df_col_annot),,drop=F]
+rownames(df_col_annot) = colnames(heatmap_matrix)
+    #pal_group = viridis::plasma(length(levels(df_col_annot$group)))
+    #names(pal_group) = levels(df_col_annot$group)
+    ph <- pheatmap(heatmap_matrix, 
+                     useRaster = T,
+                     cluster_cols=FALSE, 
+                     cluster_rows=clusterrows, 
+                     show_rownames=T, 
+                     show_colnames=F, 
+                     #clustering_distance_rows=row_dist,
+                     #clustering_method = ,
+                     #cutree_rows=num_clusters,
+                     silent=F,
+                     filename=NA,
+                     #breaks=bks,
+                     border_color = NA,
+                     #color=hmcols
+                   scale='row',#,
+                   #color=viridis(100)
+                   annotation_col = df_col_annot,
+                   annotation_colors = list(pseudotime = viridis::plasma(100)) 
+                  ) #+ theme(legend.position = "none")
+    
+
+    save_pheatmap_pdf(ph, paste0(gsub('heatmap.pdf', '', f_heatmap), '.heatmap_annot.5x7.pdf'), 7, 5)
+    ####
+    
     ph
     
 }
@@ -178,7 +226,7 @@ analyze_bridge=function(cds, from, to, pr_deg_ids=NULL, f_heatmap = 'figures/tmp
 # (NULL) to discover genes automatically
 # @param prefix character, filename prefix for the generated plots
 #
-bridge_genes=function(cds, from, to, pst_breaks=c(0.4,0.7), pr_deg_ids=NULL, prefix='figures/tmp'){
+bridge_genes=function(cds, from, to, pst_breaks=c(0.4,0.7), pr_deg_ids=NULL, prefix='figures/tmp', pt.size=1){
     # locate 'from' and 'to' nodes in the principal tree
     branchnodes = monocle3:::branch_nodes(cds)
     y0 = names(branchnodes)[from]
@@ -206,7 +254,7 @@ bridge_genes=function(cds, from, to, pst_breaks=c(0.4,0.7), pr_deg_ids=NULL, pre
                graph_label_size=1.5,
                label_roots = F,
                trajectory_graph_segment_size = 0.2,
-               cell_size = 1)#+ theme(legend.position = "none")
+               cell_size = pt.size)#+ theme(legend.position = "none")
     print(p_traject)
     print(p_traject+ theme(legend.position = "none"))
     ggsave(paste0(prefix, '.trajectory.pdf'), plot = p_traject + theme(legend.position = "none"),
@@ -226,7 +274,7 @@ bridge_genes=function(cds, from, to, pst_breaks=c(0.4,0.7), pr_deg_ids=NULL, pre
                graph_label_size=1.5,
                label_roots = F,
                trajectory_graph_segment_size = 0.2,
-               cell_size = 1)+ theme(legend.position = "none")
+               cell_size = pt.size)+ theme(legend.position = "none")
     print(p_traject_group)
     ggsave(paste0(prefix, '.groups.pdf'), plot = p_traject_group,
            width=5, height=5)
@@ -234,7 +282,9 @@ bridge_genes=function(cds, from, to, pst_breaks=c(0.4,0.7), pr_deg_ids=NULL, pre
     
     # for each gene, find if expression in bridge B population can not be explained 
     # as a linear combination of gene expression profiles in A (initial) and B (final) populations
-    M = cds_sel_pt[,order(colData(cds_sel_pt)$pseudotime)]@assays$data[[1]]
+    
+    #M = cds_sel_pt[,order(colData(cds_sel_pt)$pseudotime)]@assays$data[[1]]
+    M = cds_sel_pt[,order(colData(cds_sel_pt)$pseudotime)]@assays@data[[1]]
     cn = colnames(M)
     rss = lin.dev(cn[1:round(length(cn)/3)], 
                   cn[(1+round(2*length(cn)/3)):length(cn)], 
@@ -267,7 +317,7 @@ bridge_genes=function(cds, from, to, pst_breaks=c(0.4,0.7), pr_deg_ids=NULL, pre
     
     heatmap_matrix = na.omit(log10(as.matrix(model_expectation))[,order(colData(cds_subset)$pseudotime)])
     
-    heatmap_matrix = heatmap_matrix
+    #heatmap_matrix = heatmap_matrix
     
     #plot hearmap of the top genes alont the pseudotime
     ph <- pheatmap(heatmap_matrix, 
@@ -289,6 +339,32 @@ bridge_genes=function(cds, from, to, pst_breaks=c(0.4,0.7), pr_deg_ids=NULL, pre
                   ) #+ theme(legend.position = "none")
 
     save_pheatmap_pdf(ph, paste0(prefix, '.heatmap.5x8.pdf'), 5, 8)
+    
+
+    df_col_annot = data.frame(
+        pseudotime = as.numeric(colData(cds_subset)$pseudotime),
+        group = factor(colData(cds_subset)$group)
+    )
+    df_col_annot = df_col_annot[order(colData(cds_subset)$pseudotime),]
+    pal_group = viridis::plasma(length(levels(df_col_annot$group)))
+    names(pal_group) = levels(df_col_annot$group)
+    ph <- pheatmap(heatmap_matrix, 
+                     useRaster = T,
+                     cluster_cols=FALSE, 
+                     cluster_rows=T, 
+                     show_rownames=T, 
+                     show_colnames=F, 
+                     silent=F,
+                     filename=NA,
+                     border_color = NA,
+                   scale='row',
+                   legend=T,
+                   annotation_col = df_col_annot,
+                   annotation_colors = list(pseudotime = viridis::plasma(100), group = pal_group) 
+                  ) #+ theme(legend.position = "none")
+
+    save_pheatmap_pdf(ph, paste0(prefix, '.heatmap_annot.5x8.pdf'), 7, 8)
+    
 
     return(list(p_traject, p_traject+ theme(legend.position = "none"),
                 p_traject_group, 
