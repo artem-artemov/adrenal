@@ -28,5 +28,7 @@ wget -P data/Seurat/ http://pklab.med.harvard.edu/artem/adrenal/data/Seurat/adre
 wget -P data/Seurat/ http://pklab.med.harvard.edu/artem/adrenal/data/Seurat/sympathoblasts_chromaffin.rds
 ```
 
-Alternatively, all preprocessed data including h5 files (read counts from cellranger) and loom files (counts for exonic and intronic reads from velocyto) can be downloaded from (http://pklab.med.harvard.edu/artem/adrenal/adrenal_data.tar)
+Alternatively, all preprocessed data including h5 files (read counts from cellranger) can be downloaded from GEO: 
+- Human: GSE147821 https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE147821
+- Mouse: GSE166262 https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE166262
 
