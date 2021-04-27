@@ -8,7 +8,7 @@
 - Adrenal medulla
   * [Human adrenal medulla](notebooks/human_adrenal_medulla.ipynb)
   * [RNA velocity](notebooks/human_adrenal_medulla_velocity.ipynb)
-  * [Genes soecific to bridge population - deviation from linear mix](notebooks/deviation_from_linear_mix.ipynb)
+  * [Genes specific to bridge population - deviation from linear mix](notebooks/deviation_from_linear_mix.ipynb)
 
 
 - Other fates
