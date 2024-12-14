@@ -632,6 +632,28 @@ FILE * ggml_fopen(const char * fname, const char * mode) {
     }
 
     return file;
+
+#elif defined(__ANDROID__)
+    //Solution from here: https://stackoverflow.com/a/59004193
+    if (strstr(fname, "/proc/self/fd/") == fname) {
+        int fd = atoi(fname + 14);
+        if (fd != 0) {
+            // Why dup(fd) below: if we called fdopen() on the
+            // original fd value, and the native code closes
+            // and tries re-open that file, the second fdopen(fd)
+            // would fail, return NULL - after closing the
+            // original fd received from Android, it's no longer valid.
+            FILE *fp = fdopen(dup(fd), mode);
+            // Why rewind(fp): if the native code closes and
+            // opens again the file, the file read/write position
+            // would not change, because with dup(fd) it's still
+            // the same file...
+            rewind(fp);
+            return fp;
+        }
+    }
+    return fopen(fname, mode);
+
 #else
     return fopen(fname, mode);
 #endif
